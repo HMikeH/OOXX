@@ -1,0 +1,48 @@
+.login-container {
+width: 360px;
+margin: 80px auto;
+background: #fff;
+padding: 30px 25px;
+border-radius: 8px;
+box-shadow: 0 2px 8px #ccc;
+}
+
+.icon-label-text {
+margin: 8px 0 4px 0;
+font-size: 0.95em;
+color: #333;
+}
+
+.icons-row {
+display: flex;
+gap: 8px;
+margin: 8px 0 18px 0;
+justify-content: space-between;
+}
+
+.icon-label {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 56px;
+height: 56px;
+border-radius: 8px;
+background: #f3f3f3;
+border: 2px solid transparent;
+cursor: pointer;
+transition: box-shadow 0.08s, border-color 0.08s;
+}
+
+.icon-label input {
+display: none;
+}
+
+.icon-label .icon {
+font-size: 1.6em;
+}
+
+.icon-label.selected {
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+border-color: #333;
+background: #fff;
+}
