@@ -1,0 +1,6 @@
+{
+  "SECRET_KEY": "tic-tac-toe-login-secret",
+  "HOST": "0.0.0.0",
+  "FLASK_RUN_PORT": 5050,
+  "DEBUG": true
+}

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <div class="game-area">
+            <!-- PvP 配對區（等待動畫） -->
+            <div class="pvp-info">
+                <div class="waiting-animation">
+                    <div class="waiting-spinner">
+                        <div class="spinner-dot"></div>
+                        <div class="spinner-dot"></div>
+                        <div class="spinner-dot"></div>
+                    </div>
+                    <div class="waiting-text">等待對手加入</div>
+                    <div class="waiting-subtext">配對中，請稍候</div>
+                </div>
+            </div>
+            
+            <!-- 戰績顯示區（參考截圖UI） -->
+            <div class="score-board" id="score-board">
+                <div class="player-score left-score">
+                    <div class="player-symbol" id="left-symbol">X</div>
+                    <div class="player-info">
+                        <div class="player-name" id="left-name">玩家1</div>
+                        <div class="score-number" id="left-score">0</div>
+                    </div>
+                </div>
+                <div class="vs-section">
+                    <div class="round-info" id="round-info">回合 1/5</div>
+                    <div class="vs-text">VS</div>
+                    <div class="draw-score">平手: <span id="draw-score">0</span></div>
+                </div>
+                <div class="player-score right-score">
+                    <div class="player-info">
+                        <div class="player-name" id="right-name">玩家2</div>
+                        <div class="score-number" id="right-score">0</div>
+                    </div>
+                    <div class="player-symbol" id="right-symbol">O</div>
+                </div>
+            </div>
+            
+            <!-- 遊戲狀態提示 -->
+            <div class="game-status" id="game-status"></div>
+            
+            <!-- 遊戲棋盤 -->
+            <div class="board" id="game-board">
+                <button class="cell" data-cell="0"></button>
+                <button class="cell" data-cell="1"></button>
+                <button class="cell" data-cell="2"></button>
+                <button class="cell" data-cell="3"></button>
+                <button class="cell" data-cell="4"></button>
+                <button class="cell" data-cell="5"></button>
+                <button class="cell" data-cell="6"></button>
+                <button class="cell" data-cell="7"></button>
+                <button class="cell" data-cell="8"></button>
+            </div>
+            
+            <!-- 重置按鈕 -->
+            <button class="reset-btn" id="reset-btn" type="button" onclick="resetGame()">下一回合</button>
+        </div>
+        <div class="chatroom">
+            <h2>聊天室</h2>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-input-area">
+                <input id="chat-input" class="chat-input" type="text" placeholder="輸入訊息..." autocomplete="off" />
+                <button id="chat-send" class="chat-send" onclick="sendMessage()">送出</button>
+            </div>
+        </div>
+    </div>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- 遊戲邏輯 -->
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+    <!-- 初始化遊戲 -->
+    <script>
+        // 頁面載入完成後初始化遊戲
+        document.addEventListener('DOMContentLoaded', function() {
+            initGame();
+        });
+    </script>
+</body>
+</html>
