@@ -5,7 +5,7 @@
 
 // 全域變數
 const socket = io();
-let chatMessages, chatInput, chatSend, gameBoard, resetBtn;
+let chatMessages, chatInput, chatSend, chatTarget, gameBoard, resetBtn;
 
 // 遊戲狀態
 let mySymbol = null;
@@ -19,6 +19,9 @@ let roundCount = 0;
 let matchFinished = false;
 let board = [[null, null, null], [null, null, null], [null, null, null]];
 
+// 在線用戶列表
+let onlineUsers = [];
+
 /**
  * 初始化遊戲
  * 頁面完成後自動載入
@@ -28,6 +31,7 @@ function initGame() {
   chatMessages = document.getElementById("chat-messages");
   chatInput = document.getElementById("chat-input");
   chatSend = document.getElementById("chat-send");
+  chatTarget = document.getElementById("chat-target");
   gameBoard = document.getElementById("game-board");
   resetBtn = document.getElementById("reset-btn");
 
@@ -39,6 +43,9 @@ function initGame() {
       cell.textContent = "";
     });
   }
+
+  // 設定鍵盤數字鍵監聽
+  document.addEventListener("keydown", keyboardHandler);
 
   // 設置聊天室相關事件監聽
   setupChatEvents();
@@ -68,6 +75,17 @@ function setupChatEvents() {
     } else {
       appendMessage(msg);
     }
+  });
+
+  // 在線用戶列表更新
+  socket.on("online_users", function (users) {
+    onlineUsers = users;
+    updateUserList();
+  });
+
+  // 私聊消息
+  socket.on("private_message", function (msg) {
+    appendMessage(msg, true);
   });
 }
 
@@ -144,6 +162,8 @@ function setupPvPEvents() {
     }
 
     clearBoard();
+    clearWinningLines();
+    // clearWinningCellAnimations();
     updateTurnDisplay();
     updateScoreDisplay();
   });
@@ -167,6 +187,7 @@ function setupPvPEvents() {
     // 繪製連線
     if (data.winning_lines && data.winning_lines.length > 0) {
       drawWinningLines(data.winning_lines);
+      animateWinningCells(data.winning_lines); // 新增棋盤動畫
     }
 
     // 禁用所有格子
@@ -218,8 +239,7 @@ function setupPvPEvents() {
       if (data.winner === "Draw") {
         updateGameStatus("平手！", "draw");
       } else {
-        // 判斷誰贏了
-        const mySymbol = mySide === "left" ? leftPlayer.symbol : rightPlayer.symbol;
+        // 判斷誰贏了 - 直接使用全局的 mySymbol
         const iWon = (data.winner === mySymbol);
 
         if (iWon) {
@@ -279,6 +299,7 @@ function setupPvPEvents() {
 
     clearBoard();
     clearWinningLines();
+    // clearWinningCellAnimations();
     updateScoreDisplay();
     updateTurnDisplay();
 
@@ -315,6 +336,7 @@ function setupPvPEvents() {
     // 更新UI
     clearBoard();
     clearWinningLines();
+    // clearWinningCellAnimations()
     updateScoreDisplay();
     updateTurnDisplay();
 
@@ -405,7 +427,7 @@ function setupPvPEvents() {
 /**
  * 聊天室功能
  */
-function appendMessage(msg) {
+function appendMessage(msg, isPrivate = false) {
   if (chatMessages) {
     const div = document.createElement("div");
     // 支援字串或結構化物件 { username, message, time }
@@ -415,9 +437,14 @@ function appendMessage(msg) {
       const user = msg.username || "匿名";
       const time = msg.time || "";
       const message = msg.message || "";
+      const prefix = isPrivate ? "[私訊] " : "";
       div.textContent = time
-        ? `[${time}] ${user}: ${message}`
-        : `${user}: ${message}`;
+        ? `${prefix}[${time}] ${user}: ${message}`
+        : `${prefix}${user}: ${message}`;
+      if (isPrivate) {
+        div.style.color = "#0074D9";
+        div.style.fontStyle = "italic";
+      }
     } else {
       div.textContent = String(msg);
     }
@@ -426,12 +453,57 @@ function appendMessage(msg) {
   }
 }
 
+function updateUserList() {
+  if (!chatTarget) return;
+  
+  // 保存當前選擇
+  const currentValue = chatTarget.value;
+  
+  // 清空選項
+  chatTarget.innerHTML = '<option value="all">廣播給所有人</option>';
+  
+  // 找出自己的 username
+  const myUsername = onlineUsers.find(u => u.sid === socket.id)?.username;
+  
+  // 去重：同一個 username 只顯示一次，取最新的 sid，且排除自己
+  const userMap = new Map();
+  onlineUsers.forEach(user => {
+    if (user.sid !== socket.id && user.username !== myUsername) { // 不顯示自己
+      userMap.set(user.username, user.sid);
+    }
+  });
+  
+  // 添加在線用戶
+  userMap.forEach((sid, username) => {
+    const option = document.createElement("option");
+    option.value = sid;
+    option.textContent = `私訊給 ${username}`;
+    chatTarget.appendChild(option);
+  });
+  
+  // 恢復選擇（如果還存在）
+  if (currentValue && Array.from(chatTarget.options).some(opt => opt.value === currentValue)) {
+    chatTarget.value = currentValue;
+  }
+}
+
 function sendMessage() {
   const msg = chatInput.value.trim();
   if (msg) {
-    // 以結構化 JSON 送出，伺服器會以 session 的 username 覆蓋或填入
     const timestamp = new Date().toLocaleTimeString("zh-TW", { hour12: false });
-    socket.emit("chat message", { message: msg, time: timestamp });
+    const target = chatTarget ? chatTarget.value : "all";
+    
+    if (target === "all") {
+      // 廣播消息
+      socket.emit("chat message", { message: msg, time: timestamp });
+    } else {
+      // 私聊消息
+      socket.emit("private_message", { 
+        message: msg, 
+        time: timestamp, 
+        to: target 
+      });
+    }
     chatInput.value = "";
   }
 }
@@ -539,6 +611,7 @@ function updateScoreDisplay() {
 function drawWinningLines(winningLines) {
   // 清除之前的連線
   clearWinningLines();
+  // clearWinningCellAnimations();
 
   if (!gameBoard) return;
 
@@ -562,19 +635,22 @@ function drawWinningLines(winningLines) {
     canvas.height = rect.height;
 
     const ctx = canvas.getContext("2d");
-    const cellWidth = rect.width / 3;
-    const cellHeight = rect.height / 3;
-
+    
+    // 計算每個格子的實際位置（包含間隙）
+    const cellSize = 100;
+    const gap = 8;
+    
     // 起點和終點
     const startRow = line[0][0];
     const startCol = line[0][1];
     const endRow = line[2][0];
     const endCol = line[2][1];
 
-    const startX = (startCol + 0.5) * cellWidth;
-    const startY = (startRow + 0.5) * cellHeight;
-    const endX = (endCol + 0.5) * cellWidth;
-    const endY = (endRow + 0.5) * cellHeight;
+    // 计算格子中心坐标
+    const startX = startCol * (cellSize + gap) + cellSize / 2;
+    const startY = startRow * (cellSize + gap) + cellSize / 2;
+    const endX = endCol * (cellSize + gap) + cellSize / 2;
+    const endY = endRow * (cellSize + gap) + cellSize / 2;
 
     // 繪製線條
     ctx.strokeStyle = "#FF5722";
@@ -587,8 +663,90 @@ function drawWinningLines(winningLines) {
   });
 }
 
+// 清除連線動畫
 function clearWinningLines() {
   if (!gameBoard) return;
   const lines = gameBoard.querySelectorAll(".winning-line");
   lines.forEach((line) => line.remove());
+
+  const cells = gameBoard.querySelectorAll(".winning-cell");
+  cells.forEach(cell => {
+      cell.classList.remove("winning-cell");
+      });
+
 }
+
+// function clearWinningCellAnimations() {
+//     if (!gameBoard) return;
+//     const cells = gameBoard.querySelectorAll(".winning-cell");
+//     cells.forEach(cell => {
+//         cell.classList.remove("winning-cell");
+//     });
+// }
+
+
+/*
+ * 新增贏線上格子動畫
+ */
+function animateWinningCells(winningLines) {
+    if (!gameBoard) return;
+    
+    // 獲取所有贏線上的格子
+    const winningCells = new Set(); // 使用 Set 避免取到重複的格子
+    winningLines.forEach(line => {
+        line.forEach(coord => {
+            const cellIndex = coord[0] * 3 + coord[1]; // 計算格子索引；行*3 + 列 = 索引
+            winningCells.add(cellIndex);
+        });
+    });
+    
+    // 為這些格子添加動畫 class
+    const cells = gameBoard.querySelectorAll(".cell");
+    winningCells.forEach(index => {
+        cells[index].classList.add("winning-cell");
+    });
+}
+
+function keyboardHandler(event) {
+    // switch (event.code) {
+    //   case "Numpad1":
+    //       console.log("按了 Numpad 1");
+    //       break;
+    // }
+
+    // 檢查是不是數字鍵盤並且遊戲正在進行中
+    if (!event.code.startsWith("Numpad") || !gameActive || currentTurn !== mySymbol) {
+        return;
+    }
+
+    // 數字鍵盤對應棋盤座標
+    // Numpad 7(0,0) | Numpad 8(0,1) | Numpad 9(0,2)
+    // Numpad 4(1,0) | Numpad 5(1,1) | Numpad 6(1,2)
+    // Numpad 1(2,0) | Numpad 2(2,1) | Numpad 3(2,2)
+    
+    const keyToCoord = {
+        "Numpad7": { row: 0, col: 0 },
+        "Numpad8": { row: 0, col: 1 },
+        "Numpad9": { row: 0, col: 2 },
+        "Numpad4": { row: 1, col: 0 },
+        "Numpad5": { row: 1, col: 1 },
+        "Numpad6": { row: 1, col: 2 },
+        "Numpad1": { row: 2, col: 0 },
+        "Numpad2": { row: 2, col: 1 },
+        "Numpad3": { row: 2, col: 2 }
+    };
+
+    const coord = keyToCoord[event.code];
+    if (coord) {
+        event.preventDefault(); // 防止瀏覽器預設行為
+        // 發送下棋動作到後端
+        socket.emit("action", {
+            action: "make_move",
+            data: {
+                row: coord.row,
+                col: coord.col
+            }
+        });
+    }
+};
+

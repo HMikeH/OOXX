@@ -267,12 +267,20 @@ def register_game_events(socketio):
         處理玩家斷線
         當玩家離開時，通知房間內的其他玩家
         """
+        from ChatEvents import online_users
+        
         sid = request.sid
         room_id = room_manager.leave_room(sid)
         
         if room_id:
             # 通知對手玩家已離開
             emit('opponent_left', room=room_id)
+        
+        # 從在線用戶列表移除
+        if sid in online_users:
+            del online_users[sid]
+            # 廣播更新後的在線用戶列表
+            emit('online_users', list(online_users.values()), broadcast=True)
 
 
 def get_winning_lines(board):

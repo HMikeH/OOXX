@@ -336,6 +336,18 @@ button {
 
 .chat-input-area {
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chat-target {
+  width: 100%;
+  padding: 6px;
+  font-size: 0.9em;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
 }
 
 .chat-input {
@@ -389,4 +401,20 @@ button {
   height: 100%;
   pointer-events: none;
   z-index: 10;
+}
+
+/* 連線棋盤格動畫 */
+.winning-cell {
+    animation: winPulse 1s ease-in-out infinite !important;
+}
+
+@keyframes winPulse {
+    0%, 100% {
+        background-color: #fff;
+        transform: scale(1);
+    }
+    50% {
+        background-color: #FFE082;  /* 黃色 */
+        transform: scale(1.1);       /* 變大 10% */
+    }
 }

@@ -69,6 +69,9 @@
             <h2>聊天室</h2>
             <div id="chat-messages" class="chat-messages"></div>
             <div class="chat-input-area">
+                <select id="chat-target" class="chat-target">
+                    <option value="all">廣播給所有人</option>
+                </select>
                 <input id="chat-input" class="chat-input" type="text" placeholder="輸入訊息..." autocomplete="off" />
                 <button id="chat-send" class="chat-send" onclick="sendMessage()">送出</button>
             </div>
